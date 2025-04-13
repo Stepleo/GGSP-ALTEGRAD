@@ -20,6 +20,7 @@ class VariationalAutoEncoder(nn.Module):
             super(VariationalAutoEncoder, self).__init__()
             self.n_max_nodes = n_max_nodes
             self.input_dim = input_dim
+            self.latent_dim = latent_dim
             # self.encoder = GIN(input_dim, hidden_dim_enc, hidden_dim_enc, n_layers_enc)
             self.encoder = GIN_concat(input_dim, hidden_dim_enc, hidden_dim_enc, n_layers_enc,attention=attention)
             self.fc_mu = nn.Linear(hidden_dim_enc, latent_dim)
@@ -135,7 +136,7 @@ class VariationalAutoEncoder(nn.Module):
         
         mask=torch.zeros((batch_size,self.n_max_nodes,self.n_max_nodes)).to(x_g.device)
         for i in range(batch_size):
-            n_nodes=int(x_g[i,32])
+            n_nodes=int(x_g[i,self.latent_dim])
             # print(f"the entire x_g row is {x_g[i]}")
             # print(f"n_nodes: {n_nodes}")
             # sys.exit()

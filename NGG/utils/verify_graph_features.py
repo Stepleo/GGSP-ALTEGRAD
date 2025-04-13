@@ -271,6 +271,32 @@ def compare_reconstructed_and_prompted_graphs_v2(result_df: pd.DataFrame, data_l
                 f.write("MAE for the samples for the feature \""+str(id2feats[i])+"\" is equal to: "+str(maes[i])+"\n")
                 f.write("Symmetric Mean absolute Percentage Error for the samples for the feature \""+str(id2feats[i])+"\" is equal to: "+str(norm_errors[i]*100)+"\n")
                 f.write("=" * 100 + "\n")
+    return {
+        "mse_all_features": mse_all,
+        "mae_all_features": mae_all,
+        "normalized_error": norm_error_all,
+        "nodes_mse": mses[0],
+        "nodes_mae": maes[0],
+        "nodes_smape": norm_errors[0]*100,
+        "edges_mse": mses[1],
+        "edges_mae": maes[1], 
+        "edges_smape": norm_errors[1]*100,
+        "degree_mse": mses[2],
+        "degree_mae": maes[2],
+        "degree_smape": norm_errors[2]*100,
+        "triangles_mse": mses[3],
+        "triangles_mae": maes[3],
+        "triangles_smape": norm_errors[3]*100,
+        "clustering_mse": mses[4],
+        "clustering_mae": maes[4],
+        "clustering_smape": norm_errors[4]*100,
+        "kcore_mse": mses[5],
+        "kcore_mae": maes[5],
+        "kcore_smape": norm_errors[5]*100,
+        "communities_mse": mses[6],
+        "communities_mae": maes[6],
+        "communities_smape": norm_errors[6]*100
+    }
 
 
 def main():

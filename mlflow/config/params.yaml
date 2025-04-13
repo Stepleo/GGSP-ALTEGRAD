@@ -1,0 +1,92 @@
+model_config:
+  AE: "concat"  # Autoencoder model tag: 'base', 'concat', 'features', or 'GMVAE'
+  name: "experiment_1"  # Name of the experiment
+  deepsets: false  # Enable/disable DeepSets training
+  stats_model: false  # Enable/disable Stat model training
+  train_autoencoder: true  # Enable/disable autoencoder training
+  train_denoiser: true  # Enable/disable denoiser training
+  feature_concat: true  # Use GMVAE model by default, other is concat
+  normalize: false  # Enable/disable normalization of adjacency matrix
+  labelize: false  # Enable/disable labelization of graphs into clusters
+  additional: false  # Enable/disable adding additional features to nodes
+  constrain_denoiser: false  # Enable/disable constraining the denoiser
+  no_attention: true  # Enable/disable attention mechanism in the encoder
+  early_stopping: false  # Enable/disable early stopping of VAE training
+
+hyperparameters:
+  lr:  # Learning rate for the optimizer
+    - 0.001
+    # - 0.01
+    # - 0.1
+  dropout:  # Dropout rate
+    - 0.0
+    # - 0.2
+    # - 0.5
+  batch_size:  # Batch size for training
+    - 64
+    # - 128
+    # - 256
+  epochs_deepsets:  # Number of epochs for DeepSets training
+    - 100
+    # - 200
+  epochs_autoencoder:  # Number of epochs for autoencoder training
+    - 10
+    # - 200
+  hidden_dim_encoder:  # Hidden dimension size for encoder layers
+    - 64
+    # - 128
+  hidden_dim_decoder:  # Hidden dimension size for decoder layers
+    - 128
+    # - 256
+  latent_dim:  # Dimensionality of the latent space
+    - 16
+    # - 32
+  n_max_nodes:  # Maximum number of nodes in graphs
+    - 50
+  n_layers_encoder:  # Number of layers in the encoder network
+    - 2
+    # - 3
+  n_layers_decoder:  # Number of layers in the decoder network
+    - 2
+    # - 3
+  spectral_emb_dim:  # Dimensionality of spectral embeddings
+    - 10
+    # - 20
+  epochs_denoise:  # Number of epochs for the denoising model
+    - 10
+    # - 100
+  timesteps:  # Number of timesteps in the diffusion
+    - 500
+    # - 1000
+  hidden_dim_denoise:  # Hidden dimension size for denoising model layers
+    - 256
+    # - 512
+  n_layers_denoise:  # Number of layers in the denoising model
+    - 2
+    # - 3
+  dim_condition:  # Dimensionality of conditioning vectors
+    - 64
+    # - 128
+  n_condition:  # Number of distinct condition properties
+    - 7
+    # - 10
+  beta:  # Weight for the KLD loss term
+    - 0.01
+    # - 0.05
+    # - 0.1
+  contrastive_hyperparameters:  # Hyperparameters for contrastive loss
+    - null
+    # - [0.1, 0.1]
+    # - [0.2, 0.2]
+  penalization_hyperparameters:  # Hyperparameter weight for adjacency penalization
+    - null
+    # - 0.1
+    # - 0.5
+  gmvae_loss_parameters:  # GMVAE loss hyperparameters
+    - null
+    # - [0.1, 0.1, 0.1, 0.1, 0.1]
+    # - [0.2, 0.2, 0.2, 0.2, 0.2]
+  n_clusters:  # Number of clusters for graph features
+    - null
+    # - 3
+    # - 5

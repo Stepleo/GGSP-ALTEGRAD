@@ -16,3 +16,7 @@
 #folders
 data/
 progression_archive/
+
+# MLFLOW
+mlruns/
+mlflow.db

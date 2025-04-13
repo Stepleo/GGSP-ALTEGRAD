@@ -27,6 +27,8 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 import requests
 import tarfile
 import shutil
+from itertools import product
+from argparse import Namespace
 
 
 def download_data_from_s3(url, target_folder):
@@ -121,7 +123,7 @@ def preprocess_dataset(
 
         else:
             # traverse through all the graphs of the folder
-            files = [f for f in os.listdir(graph_path)]
+            files = [f for f in os.listdir(graph_path) if f != ".keep"]
             adjs = []
             eigvals = []
 
@@ -696,6 +698,40 @@ def to_labels(adj, kmeans=None):
 
     # Transform back to a tensor of size (batch_size, nfeatures + 1)
     return torch.tensor(all_properties, dtype=torch.float32).to(adj.device)
+
+
+def generate_args_from_config(config):
+    """
+    Generate argparse.Namespace-like objects for each combination of hyperparameters
+    defined in the config.
+
+    Args:
+        config (dict): The configuration dictionary.
+
+    Returns:
+        List[Namespace]: A list of Namespace objects, one for each combination of hyperparameters.
+    """
+    # TODO: change the name of the experiment for each set of configs
+    # Extract model configuration (fixed values)
+    model_config = config["model_config"]
+
+    # Extract hyperparameters (grid search values)
+    hyperparameters = config["hyperparameters"]
+
+    # Generate all combinations of hyperparameters
+    keys, values = zip(*hyperparameters.items())
+    combinations = [dict(zip(keys, v)) for v in product(*values)]
+
+    # Create Namespace objects for each combination
+    args_list = []
+    for combination in combinations:
+        # Merge model_config and the current hyperparameter combination
+        merged_config = {**model_config, **combination}
+        # Convert to Namespace
+        args = Namespace(**merged_config)
+        args_list.append(args)
+
+    return args_list
 
 
 ## testing script

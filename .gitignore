@@ -6,6 +6,7 @@
 *.tar 
 *_with_features.csv
 *.egg-info
+*.png
 # Notebooks
 *.ipynb
 

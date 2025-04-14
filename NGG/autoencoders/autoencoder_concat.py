@@ -33,6 +33,7 @@ class VariationalAutoEncoder_concat(VariationalAutoEncoder):
         super().__init__(input_dim, hidden_dim_enc, hidden_dim_dec, latent_dim, n_layers_enc, n_layers_dec, n_max_nodes, deepsets)
         self.encoder = GIN_concat(input_dim, hidden_dim_enc, hidden_dim_enc, n_layers_enc, attention=attention)
         additional_dim = 7
+        self.additional_dim = additional_dim
         self.norm = normalize   
         if normalize:
             self.decoder = Decoder_normalized(latent_dim+additional_dim, hidden_dim_dec, n_layers_dec, n_max_nodes)

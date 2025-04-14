@@ -95,6 +95,8 @@ class DenoiseNN(nn.Module):
         super(DenoiseNN, self).__init__()
         self.n_layers = n_layers
         self.n_cond = n_cond
+        self.input_dim = input_dim
+        self.d_cond = d_cond
         self.cond_mlp = nn.Sequential(
             nn.Linear(n_cond, d_cond),
             nn.ReLU(),

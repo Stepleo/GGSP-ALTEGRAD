@@ -84,7 +84,6 @@ train_loader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
 val_loader = DataLoader(validset, batch_size=args.batch_size, shuffle=False)
 test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
 
-
 deepsets = load_or_not_deepset(args, device)
 print(f"DeepSets state: {'Enabled' if deepsets else 'Disabled'}")
 stat_model = load_or_not_stat_model(args, train_loader, device)

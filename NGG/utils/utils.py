@@ -724,11 +724,12 @@ def generate_args_from_config(config):
 
     # Create Namespace objects for each combination
     args_list = []
-    for combination in combinations:
+    for i, combination in enumerate(combinations):
         # Merge model_config and the current hyperparameter combination
         merged_config = {**model_config, **combination}
         # Convert to Namespace
         args = Namespace(**merged_config)
+        args.name = f"{model_config['name']}_{i}"  # Unique name for each combination
         args_list.append(args)
 
     return args_list

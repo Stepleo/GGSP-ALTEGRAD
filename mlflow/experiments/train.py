@@ -5,46 +5,34 @@ import mlflow
 import mlflow.pytorch
 import torch.nn.functional as F
 from torch_geometric.loader import DataLoader
-from NGG.utils.utils import preprocess_dataset, linear_beta_schedule, generate_args_from_config
+from NGG.utils.utils import preprocess_dataset, linear_beta_schedule
 from NGG.train_utils.load_or_not_deepset import load_or_not_deepset
 from NGG.train_utils.load_or_not_stat_model import load_or_not_stat_model
 from NGG.train_utils.load_autoencoder import load_autoencoder
-from NGG.train_utils.train_autoencoder import train_autoencoder
-from NGG.train_utils.denoiser_train import train_denoise
+from NGG.train_utils.train_autoencoder import train_autoencoder_mlflow
+from NGG.train_utils.denoiser_train import train_denoise_mlflow
 from NGG.train_utils.check_results import check_results
 from NGG.denoiser.denoise_model import DenoiseNN
 from NGG.autoencoders.autoencoder_base import VariationalAutoEncoder
 from NGG.autoencoders.autoencoder_concat import VariationalAutoEncoder_concat
 from NGG.autoencoders.autoencoder_GMVAE import GMVAE
-import yaml
 
-# Set the working directory to the script's directory
-script_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Load configuration from params.yaml
-with open(os.path.join(script_dir, "../config/params.yaml"), "r") as f:
-    config = yaml.safe_load(f)
+def run_training(args, device):
+    """
+    Core training function that takes an args object as input and performs training, evaluation, 
+    and logging to MLFlow.
+    """
+    # Map VAE types
+    VAE_mapper = {
+        "base": VariationalAutoEncoder,
+        "concat": VariationalAutoEncoder_concat,
+        "features": "NotImplemented",
+        "GMVAE": GMVAE,
+    }
+    VAE_class = VAE_mapper[args.AE]
 
-# Set device
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-# Map VAE types
-VAE_mapper = {
-    "base": VariationalAutoEncoder,
-    "concat": VariationalAutoEncoder_concat,
-    "features": "NotImplemented",
-    "GMVAE": GMVAE,
-}
-VAE_class = VAE_mapper[config["model_config"]["AE"]]
-
-# Generate args-like objects from config
-args_list = generate_args_from_config(config)
-
-mlflow.set_tracking_uri("http://localhost:5000")
-mlflow.set_experiment("ngg_experiment")
-
-# Iterate over each combination of hyperparameters
-for args in args_list:
+    # Start MLFlow run
     with mlflow.start_run(run_name=args.name):
         # Log model configuration and hyperparameters
         mlflow.log_params(vars(args))
@@ -125,35 +113,26 @@ for args in args_list:
         optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
 
-        # TODO: change train_autoencoder to return losses
-        autoencoder = train_autoencoder(
+        autoencoder, training_history_autoencoder = train_autoencoder_mlflow(
             args, autoencoder, train_loader, val_loader, device, optimizer, scheduler
         )
 
-        # Log autoencoder model
-        input_example_autoencoder = trainset[0].x.unsqueeze(0).to(device).cpu().numpy()  # Convert to numpy
-        mlflow.pytorch.log_model(autoencoder, "autoencoder", input_example=input_example_autoencoder)
+        # Log autoencoder training and validation losses per epoch
+        for epoch, (train_loss, val_loss) in enumerate(
+            zip(
+                training_history_autoencoder["train_loss_autoencoder"],
+                training_history_autoencoder["val_loss_autoencoder"],
+            ),
+            start=1,
+        ):
+            mlflow.log_metric("train_loss_autoencoder", train_loss, step=epoch)
+            mlflow.log_metric("val_loss_autoencoder", val_loss, step=epoch)
 
         torch.cuda.empty_cache()
         gc.collect()
 
         # Define beta schedule
         betas = linear_beta_schedule(timesteps=args.timesteps)
-
-        # Define alphas
-        alphas = 1.0 - betas
-        alphas_cumprod = torch.cumprod(alphas, axis=0)
-        alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
-        sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
-
-        # Calculations for diffusion q(x_t | x_{t-1}) and others
-        sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
-        sqrt_one_minus_alphas_cumprod = torch.sqrt(1.0 - alphas_cumprod)
-
-        # Calculations for posterior q(x_{t-1} | x_t, x_0)
-        posterior_variance = (
-            betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod)
-        )
 
         # Initialize denoising model
         denoise_model = DenoiseNN(
@@ -166,8 +145,7 @@ for args in args_list:
         optimizer = torch.optim.Adam(denoise_model.parameters(), lr=args.lr)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
 
-        # TODO: change train_denoise to return losses
-        denoise_model = train_denoise(
+        denoise_model, training_history_denoiser = train_denoise_mlflow(
             args,
             denoise_model,
             autoencoder,
@@ -176,13 +154,20 @@ for args in args_list:
             train_loader,
             val_loader,
             device,
-            sqrt_alphas_cumprod,
-            sqrt_one_minus_alphas_cumprod,
+            torch.sqrt(torch.cumprod(1.0 - betas, axis=0)),
+            torch.sqrt(1.0 - torch.cumprod(1.0 - betas, axis=0)),
         )
 
-        # Log denoising model
-        input_example_denoise = torch.randn(1, args.latent_dim).to(device).cpu().numpy()  # Convert to numpy
-        mlflow.pytorch.log_model(denoise_model, "denoise_model", input_example=input_example_denoise)
+        # Log denoiser training and validation losses per epoch
+        for epoch, (train_loss, val_loss) in enumerate(
+            zip(
+                training_history_denoiser["train_loss_denoise"],
+                training_history_denoiser["val_loss_denoise"],
+            ),
+            start=1,
+        ):
+            mlflow.log_metric("train_loss_denoise", train_loss, step=epoch)
+            mlflow.log_metric("val_loss_denoise", val_loss, step=epoch)
 
         denoise_model.eval()
 
@@ -192,7 +177,9 @@ for args in args_list:
         metrics = check_results(
             args, device, autoencoder, denoise_model, test_loader, testset, betas
         )
-        if metrics is not None:  # Ensure metrics is not None
+        if metrics is not None:
             mlflow.log_metrics(metrics)
         else:
             print("Warning: Metrics returned by check_results are None. Skipping logging.")
+
+    return autoencoder, denoise_model, metrics["mse_all_features"]

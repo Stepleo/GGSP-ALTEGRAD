@@ -85,13 +85,13 @@ def check_results(args, device, autoencoder, denoise_model, test_loader,testset,
     result_df = compute_features_vectorized(graphs_df)
     result_df.to_csv(csv_file.replace(".csv", "_with_features.csv"), index=False)
     
-    mse_all = compare_reconstructed_and_prompted_graphs_v2(result_df, testset,return_log=csv_file.replace(".csv", "_log.txt"))
+    metrics = compare_reconstructed_and_prompted_graphs_v2(result_df, testset,return_log=csv_file.replace(".csv", "_log.txt"))
     
     # save json args
     with open(os.path.join(folder_directory, "args.json"), "w") as f:
         json.dump(vars(args), f)
     
-    return mse_all
+    return metrics
 
 def compute_graph_properties(graph):
     n_nodes = graph.number_of_nodes()

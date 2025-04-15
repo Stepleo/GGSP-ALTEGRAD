@@ -39,12 +39,13 @@ for args in args_list:
         best_mse = mse
         best_autoencoder = autoencoder
         best_denoise_model = denoise_model
-        spectral_emb_dim = args.spectral_emb_dim
+        best_args = args
 
 # Save the best models to MLFlow
 with mlflow.start_run(run_name="best_models"):
     # Log the best MSE
     mlflow.log_metric("best_mse_all_features", best_mse)
+    mlflow.log_params(vars(best_args))
 
     mlflow.pytorch.log_model(
         best_autoencoder,

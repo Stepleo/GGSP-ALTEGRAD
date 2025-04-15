@@ -79,7 +79,7 @@ def preprocess_dataset(
         desc_file = "./data/" + dataset + "/test.txt"
 
         if os.path.isfile(filename):
-            data_lst = torch.load(filename)
+            data_lst = torch.load(filename, weights_only=False)
             if labelize:
 
                 data_lst, kmeans = assign_labels(data_lst, kmeans, n_clusters)
@@ -115,7 +115,7 @@ def preprocess_dataset(
         desc_path = "./data/" + dataset + "/description"
 
         if os.path.isfile(filename):
-            data_lst = torch.load(filename)
+            data_lst = torch.load(filename, weights_only=False)
             if labelize:
                 data_lst, kmeans = assign_labels(data_lst, kmeans, n_clusters)
 

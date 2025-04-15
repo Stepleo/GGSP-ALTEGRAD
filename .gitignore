@@ -1,5 +1,4 @@
 #Data
-*.txt
 *.edgelist
 *.graphml
 *.pth
@@ -19,4 +18,6 @@ progression_archive/
 
 # MLFLOW
 mlruns/
+mlartifacts/
+downloaded_models/
 mlflow.db

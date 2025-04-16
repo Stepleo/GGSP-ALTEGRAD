@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY . .
 
+# Install the module
+RUN pip install -e .
+
 # Copy the run_pipeline.sh script
 COPY run_pipeline.sh /app/run_pipeline.sh
 

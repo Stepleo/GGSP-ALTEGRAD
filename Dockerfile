@@ -16,11 +16,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the application code
 COPY . .
 
-# Install the module
-RUN pip install -e .
+# Copy the run_pipeline.sh script
+COPY run_pipeline.sh /app/run_pipeline.sh
+
+# Make the script executable
+RUN chmod +x /app/run_pipeline.sh
+
+# Ensure the script is in Unix format
+RUN apt-get update && apt-get install -y dos2unix && dos2unix /app/run_pipeline.sh
 
 # Expose the port FastAPI will run on
 EXPOSE 8000
 
-# Command to run the FastAPI application
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use ENTRYPOINT for script execution
+ENTRYPOINT ["/bin/bash", "-c", "exec /app/run_pipeline.sh"]

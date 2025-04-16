@@ -1,0 +1,21 @@
+#| filename: "deployment/ingress.yaml"
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ngg-ingress
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - conditionned_graph_generation.lab.sspcloud.fr
+  rules:
+  - host: conditionned_graph_generation.lab.sspcloud.fr
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ngg-service
+            port:
+              number: 80

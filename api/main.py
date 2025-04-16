@@ -21,6 +21,17 @@ from torch_geometric.data.data import DataEdgeAttr
 # Allowlist the DataEdgeAttr class
 add_safe_globals([DataEdgeAttr])
 
+# Dynamically load the run_id from the file
+RUN_ID_FILE = "/app/mlflow/experiments/best_run_id.txt"
+try:
+    with open(RUN_ID_FILE, "r") as f:
+        DEFAULT_RUN_ID = f.read().strip()
+except FileNotFoundError:
+    raise RuntimeError(f"Run ID file not found at {RUN_ID_FILE}. Ensure evaluate.py has been run.")
+
+# Set MLflow tracking URI
+mlflow.set_tracking_uri("http://localhost:5000")
+
 # Initialize the FastAPI app
 app = FastAPI(
     title="Graph Generation and Evaluation API",
@@ -60,8 +71,6 @@ TYPE_MAPPING = {
     "constrain_denoiser": lambda x: x == "True",
     "early_stopping": lambda x: x == "True",
 }
-
-DEFAULT_RUN_ID = "dbe367f8c80e4fc68012fa3eb7aafc8c"  # Replace with your default run_id
 
 @app.get("/", tags=["Welcome"])
 def show_welcome_page():

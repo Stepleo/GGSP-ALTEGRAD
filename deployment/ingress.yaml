@@ -7,9 +7,9 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - conditionned_graph_generation.lab.sspcloud.fr
+    - conditionned-graph-generation.lab.sspcloud.fr
   rules:
-  - host: conditionned_graph_generation.lab.sspcloud.fr
+  - host: conditionned-graph-generation.lab.sspcloud.fr
     http:
       paths:
       - path: /

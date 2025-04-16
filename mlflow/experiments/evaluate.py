@@ -21,7 +21,7 @@ with open(os.path.join(script_dir, "../config/params.yaml"), "r") as f:
 # Generate args-like objects from config
 args_list = generate_args_from_config(config)
 
-mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_tracking_uri("http://localhost:5000")  # Updated MLflow tracking URI
 mlflow.set_experiment(config["model_config"]["name"])
 
 # Track the best models and their MSE
@@ -42,7 +42,7 @@ for args in args_list:
         best_args = args
 
 # Save the best models to MLFlow
-with mlflow.start_run(run_name="best_models"):
+with mlflow.start_run(run_name="best_models") as best_run:
     # Log the best MSE
     mlflow.log_metric("best_mse_all_features", best_mse)
     mlflow.log_params(vars(best_args))
@@ -57,4 +57,9 @@ with mlflow.start_run(run_name="best_models"):
         "best_denoise_model",
     )
 
+    # Save the run_id of the best_models run to a file
+    with open("/app/mlflow/experiments/best_run_id.txt", "w") as f:
+        f.write(best_run.info.run_id)
+
 print(f"Best MSE on all features: {best_mse}")
+print(f"Best run_id: {best_run.info.run_id}")

@@ -23,6 +23,9 @@ def run_training(args, device):
     Core training function that takes an args object as input and performs training, evaluation, 
     and logging to MLFlow.
     """
+    # Set MLflow tracking URI
+    mlflow.set_tracking_uri("http://localhost:5000")  # Replace with your MLflow server URL
+
     # Map VAE types
     VAE_mapper = {
         "base": VariationalAutoEncoder,

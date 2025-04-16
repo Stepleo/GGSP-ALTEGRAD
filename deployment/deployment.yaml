@@ -18,6 +18,9 @@ spec:
       containers:
       - name: ngg
         image: leostep/fastapi-mlflow:latest
+        env:
+        - name: MLFLOW_TRACKING_URI
+          value: "http://localhost:5000"
         ports:
         - containerPort: 8000
         resources:

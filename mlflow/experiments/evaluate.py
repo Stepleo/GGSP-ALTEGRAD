@@ -21,7 +21,11 @@ with open(os.path.join(script_dir, "../config/params.yaml"), "r") as f:
 # Generate args-like objects from config
 args_list = generate_args_from_config(config)
 
-mlflow.set_tracking_uri("https://user-lstepien-mlflow.user.lab.sspcloud.fr")  # Updated MLflow tracking URI
+# Set the MLflow tracking URI
+mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
+mlflow.set_tracking_uri(mlflow_tracking_uri)
+
+# The username and password will be picked up from the environment variables
 mlflow.set_experiment(config["model_config"]["name"])
 
 # Track the best models and their MSE

@@ -2,7 +2,6 @@ import os
 import gc
 import torch
 import mlflow
-import mlflow.pytorch
 import torch.nn.functional as F
 from torch_geometric.loader import DataLoader
 from NGG.utils.utils import preprocess_dataset, linear_beta_schedule
@@ -24,7 +23,8 @@ def run_training(args, device):
     and logging to MLFlow.
     """
     # Set MLflow tracking URI
-    mlflow.set_tracking_uri("https://user-lstepien-mlflow.user.lab.sspcloud.fr")  # Replace with your MLflow server URL
+    mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
+    mlflow.set_tracking_uri(mlflow_tracking_uri)
 
     # Map VAE types
     VAE_mapper = {

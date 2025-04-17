@@ -47,7 +47,15 @@ jobs:
 
         kubectl config use-context apiserver.kub.sspcloud.fr
 
-    # Step 5: Deploy to Kubernetes
+    # Step 5: Create or update Kubernetes secrets
+    - name: Create or update Kubernetes secrets
+      run: |
+        kubectl create secret generic mlflow-credentials \
+          --from-literal=MLFLOW_TRACKING_USERNAME=${{ secrets.MLFLOW_TRACKING_USERNAME }} \
+          --from-literal=MLFLOW_TRACKING_PASSWORD=${{ secrets.MLFLOW_TRACKING_PASSWORD }} \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    # Step 6: Deploy to Kubernetes
     - name: Deploy to SSPCloud
       run: |
         kubectl apply -f deployment/

@@ -24,7 +24,7 @@ def run_training(args, device):
     and logging to MLFlow.
     """
     # Set MLflow tracking URI
-    mlflow.set_tracking_uri("http://localhost:5000")  # Replace with your MLflow server URL
+    mlflow.set_tracking_uri("https://user-lstepien-mlflow.user.lab.sspcloud.fr")  # Replace with your MLflow server URL
 
     # Map VAE types
     VAE_mapper = {

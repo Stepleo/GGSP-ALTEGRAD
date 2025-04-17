@@ -7,6 +7,9 @@ WORKDIR /app
 # Copy the requirements file
 COPY requirements.txt .
 
+# Copy the mlflow directory
+COPY ./mlflow /app/mlflow
+
 # Copy the api directory
 COPY ./api /app/api
 

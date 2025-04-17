@@ -16,16 +16,15 @@ spec:
         app: ngg
     spec:
       containers:
-      - name: mlflow
+      - name: ngg
         image: leostep/fastapi-mlflow:latest
-        command: ["mlflow", "server", "--backend-store-uri", "sqlite:///mlflow.db", "--default-artifact-root", "./mlruns", "--host", "0.0.0.0", "--port", "5000"]
-        ports:
-        - containerPort: 5000
-      - name: fastapi
-        image: leostep/fastapi-mlflow:latest
-        command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
         ports:
         - containerPort: 8000
+        - containerPort: 5000
         env:
         - name: MLFLOW_TRACKING_URI
-          value: "http://localhost:5000"
+          value: "https://user-lstepien-mlflow.user.lab.sspcloud.fr"
+        - name: MLFLOW_TRACKING_USERNAME
+          value: "secret"  # Replace with your SSPCloud username
+        - name: MLFLOW_TRACKING_PASSWORD
+          value: "secret"  # Replace with your SSPCloud password

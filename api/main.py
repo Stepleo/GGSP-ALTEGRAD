@@ -29,8 +29,9 @@ try:
 except FileNotFoundError:
     raise RuntimeError(f"Run ID file not found at {RUN_ID_FILE}. Ensure evaluate.py has been run.")
 
-# Set MLflow tracking URI
-mlflow.set_tracking_uri("http://localhost:5000")
+# Dynamically set the MLflow tracking URI from the environment variable
+mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
+mlflow.set_tracking_uri(mlflow_tracking_uri)
 
 # Initialize the FastAPI app
 app = FastAPI(
@@ -90,7 +91,7 @@ def show_default_metrics():
     Display metrics for a default run_id.
     """
     try:
-        mlflow.set_tracking_uri("http://172.17.0.1:5000")
+        mlflow.set_tracking_uri(mlflow_tracking_uri)
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # Use the default run_id
         run_id = DEFAULT_RUN_ID
@@ -172,7 +173,7 @@ def run_check_results(request: CheckResultsRequest):
     """
     try:
         logging.debug("Starting check_results...")
-        mlflow.set_tracking_uri("http://172.17.0.1:5000")
+        mlflow.set_tracking_uri(mlflow_tracking_uri)
         # Load models and parameters using the run_id
         run_id = request.run_id
         logging.debug(f"Using run_id: {run_id}")

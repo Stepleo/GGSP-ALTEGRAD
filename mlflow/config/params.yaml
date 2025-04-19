@@ -90,3 +90,6 @@ hyperparameters:
     - null
     # - 3
     # - 5
+  cv_folds:  # Number of cross-validation folds
+    - 5
+    # - 10

@@ -61,9 +61,10 @@ with mlflow.start_run(run_name="best_models") as best_run:
         "best_denoise_model",
     )
 
-    # Save the run_id of the best_models run to a file
-    with open("/app/mlflow/experiments/best_run_id.txt", "w") as f:
-        f.write(best_run.info.run_id)
+    # Save the run_id of the best_models run to a file if the directory exists
+    if os.path.exists("/app/mlflow/experiments/best_run_id.txt"):
+        with open("/app/mlflow/experiments/best_run_id.txt", "w") as f:
+            f.write(best_run.info.run_id)
 
 print(f"Best MSE on all features: {best_mse}")
 print(f"Best run_id: {best_run.info.run_id}")

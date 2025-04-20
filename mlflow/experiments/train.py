@@ -19,7 +19,6 @@ from NGG.autoencoders.autoencoder_concat import VariationalAutoEncoder_concat
 from NGG.autoencoders.autoencoder_GMVAE import GMVAE
 
 
-
 def run_training(args, device):
     """
     Core training function that takes an args object as input and performs training, evaluation, 
@@ -99,85 +98,198 @@ def run_training(args, device):
             )
             kmeans = None
 
-        # Set node feature dimension
-        args.node_feature_dimension = trainset[0].x.shape[1]
+        if hasattr(args, "cv_folds") and args.cv_folds > 1:
+            cv_folds = args.cv_folds
+            kf = KFold(n_splits=cv_folds, shuffle=True, random_state=42)
+            mse_folds = []
+            for fold, (train_idx, val_idx) in enumerate(kf.split(trainset), start=1):
+                print(f"Début du fold {fold}/{cv_folds}")
+                cv_trainset = torch.utils.data.Subset(trainset, train_idx)
+                cv_validset = torch.utils.data.Subset(trainset, val_idx)
+                train_loader = DataLoader(cv_trainset, batch_size=args.batch_size, shuffle=True)
+                val_loader = DataLoader(cv_validset, batch_size=args.batch_size, shuffle=False)
 
-        # Initialize data loaders
-        train_loader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
-        val_loader = DataLoader(validset, batch_size=args.batch_size, shuffle=False)
-        test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
+                # Charger les composants du modèle pour ce fold
+                deepsets = load_or_not_deepset(args, device)
+                stat_model = load_or_not_stat_model(args, train_loader, device)
+                to_labels = stat_model if stat_model is not None else None
+                autoencoder = load_autoencoder(args, VAE_class, args.AE, to_labels, device, deepsets)
 
-        # Load models
-        deepsets = load_or_not_deepset(args, device)
-        stat_model = load_or_not_stat_model(args, train_loader, device)
-        to_labels = stat_model if stat_model is not None else kmeans
-        autoencoder = load_autoencoder(
-            args, VAE_class, args.AE, to_labels, device, deepsets
-        )
+                optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
+                scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
 
-        # Train autoencoder
-        optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
+                autoencoder, _ = train_autoencoder_mlflow(
+                    args, autoencoder, train_loader, val_loader, device, optimizer, scheduler
+                )
 
-        autoencoder, training_history_autoencoder = train_autoencoder_mlflow(
-            args, autoencoder, train_loader, val_loader, device, optimizer, scheduler
-        )
+                # Entraînement du modèle de débruitage
+                betas = linear_beta_schedule(timesteps=args.timesteps)
+                denoise_model = DenoiseNN(
+                    input_dim=args.latent_dim,
+                    hidden_dim=args.hidden_dim_denoise,
+                    n_layers=args.n_layers_denoise,
+                    n_cond=args.n_condition,
+                    d_cond=args.dim_condition,
+                ).to(device)
+                optimizer_den = torch.optim.Adam(denoise_model.parameters(), lr=args.lr)
+                scheduler_den = torch.optim.lr_scheduler.StepLR(optimizer_den, step_size=500, gamma=0.1)
 
-        # Log autoencoder training and validation losses per epoch
-        for epoch, (train_loss, val_loss) in enumerate(
-            zip(
-                training_history_autoencoder["train_loss_autoencoder"],
-                training_history_autoencoder["val_loss_autoencoder"],
-            ),
-            start=1,
-        ):
-            mlflow.log_metric("train_loss_autoencoder", train_loss, step=epoch)
-            mlflow.log_metric("val_loss_autoencoder", val_loss, step=epoch)
+                denoise_model, _ = train_denoise_mlflow(
+                    args,
+                    denoise_model,
+                    autoencoder,
+                    optimizer_den,
+                    scheduler_den,
+                    train_loader,
+                    val_loader,
+                    device,
+                    torch.sqrt(torch.cumprod(1.0 - betas, axis=0)),
+                    torch.sqrt(1.0 - torch.cumprod(1.0 - betas, axis=0)),
+                )
 
-        torch.cuda.empty_cache()
-        gc.collect()
+                denoise_model.eval()
 
-        # Define beta schedule
-        betas = linear_beta_schedule(timesteps=args.timesteps)
+                # Évaluer sur le fold de validation
+                val_loader_eval = DataLoader(cv_validset, batch_size=args.batch_size, shuffle=False)
+                metrics = check_results(
+                    args, device, autoencoder, denoise_model, val_loader_eval, cv_validset, betas
+                )
+                print(f"Fold {fold} MSE: {metrics['mse_all_features']}")
+                mse_folds.append(metrics["mse_all_features"])
 
-        # Initialize denoising model
-        denoise_model = DenoiseNN(
-            input_dim=args.latent_dim,
-            hidden_dim=args.hidden_dim_denoise,
-            n_layers=args.n_layers_denoise,
-            n_cond=args.n_condition,
-            d_cond=args.dim_condition,
-        ).to(device)
-        optimizer = torch.optim.Adam(denoise_model.parameters(), lr=args.lr)
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
+                # Nettoyage
+                del train_loader, val_loader, val_loader_eval
+                torch.cuda.empty_cache()
+                gc.collect()
 
-        denoise_model, training_history_denoiser = train_denoise_mlflow(
-            args,
-            denoise_model,
-            autoencoder,
-            optimizer,
-            scheduler,
-            train_loader,
-            val_loader,
-            device,
-            torch.sqrt(torch.cumprod(1.0 - betas, axis=0)),
-            torch.sqrt(1.0 - torch.cumprod(1.0 - betas, axis=0)),
-        )
+            avg_mse = sum(mse_folds) / len(mse_folds)
+            print(f"MSE moyen en validation croisée: {avg_mse}")
 
-        # Log denoiser training and validation losses per epoch
-        for epoch, (train_loss, val_loss) in enumerate(
-            zip(
-                training_history_denoiser["train_loss_denoise"],
-                training_history_denoiser["val_loss_denoise"],
-            ),
-            start=1,
-        ):
-            mlflow.log_metric("train_loss_denoise", train_loss, step=epoch)
-            mlflow.log_metric("val_loss_denoise", val_loss, step=epoch)
+            # Entraînement final sur l'ensemble complet full_train avant évaluation sur testset
+            train_loader_final = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
+            val_loader_final = DataLoader(trainset, batch_size=args.batch_size, shuffle=False)
+            deepsets = load_or_not_deepset(args, device)
+            stat_model = load_or_not_stat_model(args, train_loader_final, device)
+            to_labels = stat_model if stat_model is not None else None
+            autoencoder = load_autoencoder(args, VAE_class, args.AE, to_labels, device, deepsets)
 
-        denoise_model.eval()
+            optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
 
-        del train_loader, val_loader
+            autoencoder, _ = train_autoencoder_mlflow(
+                args, autoencoder, train_loader_final, val_loader_final, device, optimizer, scheduler
+            )
+
+            betas = linear_beta_schedule(timesteps=args.timesteps)
+            denoise_model = DenoiseNN(
+                input_dim=args.latent_dim,
+                hidden_dim=args.hidden_dim_denoise,
+                n_layers=args.n_layers_denoise,
+                n_cond=args.n_condition,
+                d_cond=args.dim_condition,
+            ).to(device)
+            optimizer_den = torch.optim.Adam(denoise_model.parameters(), lr=args.lr)
+            scheduler_den = torch.optim.lr_scheduler.StepLR(optimizer_den, step_size=500, gamma=0.1)
+
+            denoise_model, _ = train_denoise_mlflow(
+                args,
+                denoise_model,
+                autoencoder,
+                optimizer_den,
+                scheduler_den,
+                train_loader_final,
+                val_loader_final,
+                device,
+                torch.sqrt(torch.cumprod(1.0 - betas, axis=0)),
+                torch.sqrt(1.0 - torch.cumprod(1.0 - betas, axis=0)),
+            )
+            denoise_model.eval()
+
+            test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
+            final_metrics = check_results(
+                args, device, autoencoder, denoise_model, test_loader, testset, betas
+            )
+            final_mse = final_metrics["mse_all_features"]
+        else:
+            # Set node feature dimension
+            args.node_feature_dimension = trainset[0].x.shape[1]
+
+            # Initialize data loaders
+            train_loader = DataLoader(trainset, batch_size=args.batch_size, shuffle=True)
+            val_loader = DataLoader(validset, batch_size=args.batch_size, shuffle=False)
+            test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
+
+            # Load models
+            deepsets = load_or_not_deepset(args, device)
+            stat_model = load_or_not_stat_model(args, train_loader, device)
+            to_labels = stat_model if stat_model is not None else kmeans
+            autoencoder = load_autoencoder(
+                args, VAE_class, args.AE, to_labels, device, deepsets
+            )
+
+            # Train autoencoder
+            optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
+
+            autoencoder, training_history_autoencoder = train_autoencoder_mlflow(
+                args, autoencoder, train_loader, val_loader, device, optimizer, scheduler
+            )
+
+            # Log autoencoder training and validation losses per epoch
+            for epoch, (train_loss, val_loss) in enumerate(
+                zip(
+                    training_history_autoencoder["train_loss_autoencoder"],
+                    training_history_autoencoder["val_loss_autoencoder"],
+                ),
+                start=1,
+            ):
+                mlflow.log_metric("train_loss_autoencoder", train_loss, step=epoch)
+                mlflow.log_metric("val_loss_autoencoder", val_loss, step=epoch)
+
+            torch.cuda.empty_cache()
+            gc.collect()
+
+            # Define beta schedule
+            betas = linear_beta_schedule(timesteps=args.timesteps)
+
+            # Initialize denoising model
+            denoise_model = DenoiseNN(
+                input_dim=args.latent_dim,
+                hidden_dim=args.hidden_dim_denoise,
+                n_layers=args.n_layers_denoise,
+                n_cond=args.n_condition,
+                d_cond=args.dim_condition,
+            ).to(device)
+            optimizer = torch.optim.Adam(denoise_model.parameters(), lr=args.lr)
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
+
+            denoise_model, training_history_denoiser = train_denoise_mlflow(
+                args,
+                denoise_model,
+                autoencoder,
+                optimizer,
+                scheduler,
+                train_loader,
+                val_loader,
+                device,
+                torch.sqrt(torch.cumprod(1.0 - betas, axis=0)),
+                torch.sqrt(1.0 - torch.cumprod(1.0 - betas, axis=0)),
+            )
+
+            # Log denoiser training and validation losses per epoch
+            for epoch, (train_loss, val_loss) in enumerate(
+                zip(
+                    training_history_denoiser["train_loss_denoise"],
+                    training_history_denoiser["val_loss_denoise"],
+                ),
+                start=1,
+            ):
+                mlflow.log_metric("train_loss_denoise", train_loss, step=epoch)
+                mlflow.log_metric("val_loss_denoise", val_loss, step=epoch)
+
+            denoise_model.eval()
+
+            del train_loader, val_loader
 
         # Evaluate and log results
         metrics = check_results(

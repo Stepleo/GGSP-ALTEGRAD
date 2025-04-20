@@ -109,6 +109,8 @@ def run_training(args, device):
                 train_loader = DataLoader(cv_trainset, batch_size=args.batch_size, shuffle=True)
                 val_loader = DataLoader(cv_validset, batch_size=args.batch_size, shuffle=False)
 
+                args.node_feature_dimension = cv_trainset[0].x.shape[1]
+
                 # Charger les composants du modèle pour ce fold
                 deepsets = load_or_not_deepset(args, device)
                 stat_model = load_or_not_stat_model(args, train_loader, device)

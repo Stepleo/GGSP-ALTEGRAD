@@ -9,13 +9,6 @@ spec:
   - host: conditionned-graph-generation.lab.sspcloud.fr
     http:
       paths:
-      - path: /mlflow
-        pathType: Prefix
-        backend:
-          service:
-            name: mlflow-service
-            port:
-              number: 5000
       - path: /
         pathType: Prefix
         backend:

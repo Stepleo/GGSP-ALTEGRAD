@@ -226,13 +226,7 @@ def run_training(args, device):
                 mlflow.log_metric("train_loss_denoise", train_loss, step=epoch)
                 mlflow.log_metric("val_loss_denoise", val_loss, step=epoch)
 
-            denoise_model.eval()
-
-            test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
-            final_metrics = check_results(
-                args, device, autoencoder, denoise_model, test_loader, testset, betas
-            )
-            final_mse = final_metrics["mse_all_features"]
+            return autoencoder, denoise_model, avg_mse
         else:
             # Set node feature dimension
             args.node_feature_dimension = trainset[0].x.shape[1]

@@ -30,7 +30,7 @@ hyperparameters:
     - 100
     # - 200
   epochs_autoencoder:  # Number of epochs for autoencoder training
-    - 1
+    - 5
     # - 200
   hidden_dim_encoder:  # Hidden dimension size for encoder layers
     - 64
@@ -53,7 +53,7 @@ hyperparameters:
     - 10
     # - 20
   epochs_denoise:  # Number of epochs for the denoising model
-    - 1
+    - 5
     # - 100
   timesteps:  # Number of timesteps in the diffusion
     - 500

@@ -24,8 +24,12 @@ def run_training(args, device):
     Core training function that takes an args object as input and performs training, evaluation, 
     and logging to MLFlow.
     """
-    # Set MLflow tracking URI
-    mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
+    # Check if MLFLOW_TRACKING_USERNAME and MLFLOW_TRACKING_PASSWORD exist
+    if os.getenv("MLFLOW_TRACKING_USERNAME") and os.getenv("MLFLOW_TRACKING_PASSWORD"):
+        mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
+    else:
+        mlflow_tracking_uri = "http://localhost:5000"
+
     mlflow.set_tracking_uri(mlflow_tracking_uri)
 
     # Map VAE types

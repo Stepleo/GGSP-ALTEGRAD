@@ -29,9 +29,11 @@ try:
 except FileNotFoundError:
     raise RuntimeError(f"Run ID file not found at {RUN_ID_FILE}. Ensure evaluate.py has been run.")
 
-# Dynamically set the MLflow tracking URI from the environment variable
-mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
-mlflow.set_tracking_uri(mlflow_tracking_uri)
+# Check if MLFLOW_TRACKING_USERNAME and MLFLOW_TRACKING_PASSWORD exist
+if os.getenv("MLFLOW_TRACKING_USERNAME") and os.getenv("MLFLOW_TRACKING_PASSWORD"):
+    mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
+else:
+    mlflow_tracking_uri = "http://localhost:5000"
 
 # Initialize the FastAPI app
 app = FastAPI(

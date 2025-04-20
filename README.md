@@ -32,6 +32,7 @@ The workflow is centered around the file `mlflow/experiments/evaluate.py`. Here'
    - The best model is saved to MLflow for future use.
 
 ### **Try It Yourself**
+#### Run training
 To try the workflow locally:
 1. Clone the repository.
 2. Start by setting up the environment by runnning:
@@ -61,6 +62,40 @@ python NGG/main.py --n-layers-decoder 6 --n-layers-encoder 4 --n-layers-denoise 
 - ```--normalize ``` #adds self loops to the adj matrices
 You can modify the configurations in `mlflow/config/params.yaml` to experiment with different hyperparameter settings.
 
+#### Run the API locally
+1. Build the Docker Container
+Build the Docker container using the provided `Dockerfile`:
+```bash
+docker build -t <your-dockerhub-username>/fastapi-mlflow:latest .
+```
+
+2. (Optional) Push the Docker Container to Docker Hub
+If you want to push the container to your own Docker Hub repository:
+```bash
+docker login
+docker push <your-dockerhub-username>/fastapi-mlflow:latest
+```
+3. Run the Docker Container Locally
+Run the container locally. This will execute `run_pipeline.sh`:
+```bash
+docker run -p 8000:8000 -p 5000:5000 <your-dockerhub-username>/fastapi-mlflow:latest
+```
+- **Port 8000**: Exposes the FastAPI application.  
+- **Port 5000**: Exposes the MLflow server (if configured to run locally).
+
+##### **What Happens When the Container Runs**
+
+##### **`run_pipeline.sh` is Executed**:
+- The script first runs `evaluate.py` to train models and save the best models to MLflow.
+- Then, it starts the FastAPI application using `uvicorn`.
+
+##### **MLflow Server**:
+- If the environment variables `MLFLOW_TRACKING_USERNAME` and `MLFLOW_TRACKING_PASSWORD` are not set, the script defaults to using a locally hosted MLflow server (`http://localhost:5000`).
+
+##### **FastAPI Application**:
+- The FastAPI application is accessible at `http://localhost:8000`.
+- The `/check_results` endpoint can be used to evaluate the best model on the test set.
+
 ## Integrated Workflow with GitHub Actions and Kubernetes
 
 To automate the workflow, we set up **GitHub Actions** and **Kubernetes** on SSPCloud. Here's how it works:
@@ -72,7 +107,7 @@ To automate the workflow, we set up **GitHub Actions** and **Kubernetes** on SSP
 
 ### **Kubernetes Cluster**:
 - The cluster uses the Docker container to run `evaluate.py` on SSPCloud servers.
-- Metrics and models are logged to MLflow at: [https://user-lstepien-mlflow.user.lab.sspcloud.fr](https://user-lstepien-mlflow.user.lab.sspcloud.fr).
+- Metrics and models are logged to MLflow.
 
 ### **FastAPI for Model Serving**:
 - After training, the best model saved by `evaluate.py` is served using **FastAPI**.

@@ -21,8 +21,12 @@ with open(os.path.join(script_dir, "../config/params.yaml"), "r") as f:
 # Generate args-like objects from config
 args_list = generate_args_from_config(config)
 
-# Set the MLflow tracking URI
-mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
+# Check if MLFLOW_TRACKING_USERNAME and MLFLOW_TRACKING_PASSWORD exist
+if os.getenv("MLFLOW_TRACKING_USERNAME") and os.getenv("MLFLOW_TRACKING_PASSWORD"):
+    mlflow_tracking_uri = os.getenv("MLFLOW_TRACKING_URI", "https://user-lstepien-mlflow.user.lab.sspcloud.fr")
+else:
+    mlflow_tracking_uri = "http://localhost:5000"
+
 mlflow.set_tracking_uri(mlflow_tracking_uri)
 
 # The username and password will be picked up from the environment variables
@@ -61,8 +65,8 @@ with mlflow.start_run(run_name="best_models") as best_run:
         "best_denoise_model",
     )
 
-    # Save the run_id of the best_models run to a file if the directory exists
-    if os.path.exists("/app/mlflow/experiments/best_run_id.txt"):
+    # Save the run_id of the best_models run to a file if the /app folder exists
+    if os.path.exists("/app"):
         with open("/app/mlflow/experiments/best_run_id.txt", "w") as f:
             f.write(best_run.info.run_id)
 

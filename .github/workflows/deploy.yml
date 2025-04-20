@@ -58,4 +58,6 @@ jobs:
     # Step 6: Deploy to Kubernetes
     - name: Deploy to SSPCloud
       run: |
+        kubectl delete deployment,service,ingress -l app=ngg --ignore-not-found
         kubectl apply -f deployment/
+        kubectl rollout status deployment/ngg-deployment

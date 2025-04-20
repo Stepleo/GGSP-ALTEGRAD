@@ -2,6 +2,7 @@ torch==2.4.1
 networkx
 numpy<2
 torch_geometric
+sklearn
 scipy
 community
 joblib

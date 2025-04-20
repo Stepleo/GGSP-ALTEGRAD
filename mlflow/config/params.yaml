@@ -1,6 +1,6 @@
 model_config:
   AE: "concat"  # Autoencoder model tag: 'base', 'concat', 'features', or 'GMVAE'
-  name: "concat_experiment_small"  # Name of the experiment
+  name: "concat_grid_search"  # Name of the experiment
   deepsets: false  # Enable/disable DeepSets training
   stats_model: false  # Enable/disable Stat model training
   train_autoencoder: true  # Enable/disable autoencoder training
@@ -16,7 +16,7 @@ model_config:
 hyperparameters:
   lr:  # Learning rate for the optimizer
     - 0.001
-    - 0.01
+    # - 0.01
     # - 0.1
   dropout:  # Dropout rate
     - 0.0
@@ -40,7 +40,7 @@ hyperparameters:
     # - 256
   latent_dim:  # Dimensionality of the latent space
     - 16
-    # - 32
+    - 32
   n_max_nodes:  # Maximum number of nodes in graphs
     - 50
   n_layers_encoder:  # Number of layers in the encoder network
@@ -73,7 +73,7 @@ hyperparameters:
   beta:  # Weight for the KLD loss term
     - 0.01
     # - 0.05
-    # - 0.1
+    - 0.1
   contrastive_hyperparameters:  # Hyperparameters for contrastive loss
     - null
     # - [0.1, 0.1]

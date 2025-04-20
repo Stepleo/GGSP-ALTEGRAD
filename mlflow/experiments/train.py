@@ -178,9 +178,19 @@ def run_training(args, device):
             optimizer = torch.optim.Adam(autoencoder.parameters(), lr=args.lr)
             scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=500, gamma=0.1)
 
-            autoencoder, _ = train_autoencoder_mlflow(
+            autoencoder, training_history_autoencoder = train_autoencoder_mlflow(
                 args, autoencoder, train_loader_final, val_loader_final, device, optimizer, scheduler
             )
+
+            for epoch, (train_loss, val_loss) in enumerate(
+                zip(
+                    training_history_autoencoder["train_loss_autoencoder"],
+                    training_history_autoencoder["val_loss_autoencoder"],
+                ),
+                start=1,
+            ):
+                mlflow.log_metric("train_loss_autoencoder", train_loss, step=epoch)
+                mlflow.log_metric("val_loss_autoencoder", val_loss, step=epoch)
 
             betas = linear_beta_schedule(timesteps=args.timesteps)
             denoise_model = DenoiseNN(
@@ -193,7 +203,7 @@ def run_training(args, device):
             optimizer_den = torch.optim.Adam(denoise_model.parameters(), lr=args.lr)
             scheduler_den = torch.optim.lr_scheduler.StepLR(optimizer_den, step_size=500, gamma=0.1)
 
-            denoise_model, _ = train_denoise_mlflow(
+            denoise_model, training_history_denoiser = train_denoise_mlflow(
                 args,
                 denoise_model,
                 autoencoder,
@@ -205,6 +215,17 @@ def run_training(args, device):
                 torch.sqrt(torch.cumprod(1.0 - betas, axis=0)),
                 torch.sqrt(1.0 - torch.cumprod(1.0 - betas, axis=0)),
             )
+
+            for epoch, (train_loss, val_loss) in enumerate(
+                zip(
+                    training_history_denoiser["train_loss_denoise"],
+                    training_history_denoiser["val_loss_denoise"],
+                ),
+                start=1,
+            ):
+                mlflow.log_metric("train_loss_denoise", train_loss, step=epoch)
+                mlflow.log_metric("val_loss_denoise", val_loss, step=epoch)
+
             denoise_model.eval()
 
             test_loader = DataLoader(testset, batch_size=args.batch_size, shuffle=False)
